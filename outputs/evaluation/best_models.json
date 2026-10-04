@@ -1,0 +1,23 @@
+{
+    "crop_recommendation": {
+        "best_model": "Random Forest",
+        "metric": "weighted_f1",
+        "score": 0.9955,
+        "accuracy": 0.9955,
+        "cv_score": "99.31% \u00b1 0.59%"
+    },
+    "yield_prediction": {
+        "best_model": "CatBoost",
+        "metric": "r2_score",
+        "score": 0.9887,
+        "rmse": 0.1805,
+        "cv_score": "0.9873 \u00b1 0.0006"
+    },
+    "fertilizer_recommendation": {
+        "best_model": "Decision Tree",
+        "metric": "weighted_f1",
+        "score": 1.0,
+        "accuracy": 1.0,
+        "cv_score": "99.99% \u00b1 0.02%"
+    }
+}

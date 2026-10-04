@@ -1,0 +1,57 @@
+{
+  "status": "success",
+  "crop_recommendation": {
+    "model_name": "Random Forest Classifier",
+    "accuracy": 0.9205,
+    "accuracy_pct": "92.05%",
+    "precision": 0.9258,
+    "precision_pct": "92.58%",
+    "recall": 0.9205,
+    "recall_pct": "92.05%",
+    "f1_score": 0.9108,
+    "f1_score_pct": "91.08%",
+    "cv_accuracy": 0.9327,
+    "cv_std": 0.0178,
+    "cv_accuracy_str": "93.27% \u00b1 1.78%"
+  },
+  "yield_prediction": {
+    "model_name": "LightGBM Regressor",
+    "r2": 0.8989,
+    "train_r2": 0.906,
+    "train_test_gap": 0.0071,
+    "mae": 3.7975,
+    "rmse": 4.3064,
+    "cv_r2": 0.9033,
+    "cv_std": 0.0044,
+    "cv_r2_str": "0.9033 \u00b1 0.0044"
+  },
+  "fertilizer": {
+    "model_name": "Random Forest Classifier",
+    "accuracy": 0.9295,
+    "accuracy_pct": "92.95%",
+    "precision": 0.9449,
+    "precision_pct": "94.49%",
+    "recall": 0.9295,
+    "recall_pct": "92.95%",
+    "weighted_f1": 0.9303,
+    "weighted_f1_pct": "93.03%",
+    "macro_f1": 0.9348,
+    "macro_f1_pct": "93.48%",
+    "f1_score": 0.9348,
+    "f1_score_pct": "93.48%",
+    "cv_accuracy": 0.9329,
+    "cv_std": 0.0082,
+    "cv_accuracy_str": "93.29% ± 0.82%",
+    "score": 0.9295,
+    "score_pct": "92.95%",
+    "validation_type": "5-Fold Stratified CV",
+    "description": "Random Forest model evaluated under 80:20 stratified split & 5-fold CV"
+  },
+  "irrigation": {
+    "model_name": "Hydrological Boundary Engine",
+    "validation_type": "Boundary Scenario Validation",
+    "validated": 4,
+    "total": 4,
+    "display": "4/4 Boundary Scenarios Validated"
+  }
+}

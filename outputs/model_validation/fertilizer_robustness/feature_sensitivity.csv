@@ -1,0 +1,8 @@
+Feature,Perturbation,Prediction_Change_Rate
+Nitrogen_Level,±5%,0.75
+Phosphorus_Level,±5%,2.05
+Potassium_Level,±5%,1.35
+Soil_pH,±0.1,4.9
+Temperature,±1°C,0.0
+Humidity,±3%,0.0
+Soil_Moisture,±5%,0.0

@@ -1,0 +1,9 @@
+City,Status,Temperature_C,Humidity_Pct,Rainfall_mm,Wind_Speed_ms,Pressure_hPa,Cloud_Cover_Pct,Latency_ms
+Chennai,Fallback,26.4,74.0,4.8,4.1,1009.0,54,123.14
+Bengaluru,Fallback,25.4,68.0,3.6,3.3,1008.0,53,91.66
+Delhi,Fallback,28.4,76.0,1.2,4.1,1011.0,6,76.81
+Mumbai,Fallback,25.4,53.0,3.6,4.9,1008.0,43,78.9
+Madurai,Fallback,24.4,52.0,2.4,4.9,1007.0,67,82.65
+Coimbatore,Fallback,31.4,59.0,4.8,3.3,1014.0,69,86.7
+Kolkata,Fallback,28.4,56.0,1.2,4.9,1011.0,71,75.86
+Hyderabad,Fallback,22.4,70.0,0.0,2.5,1005.0,20,103.28

@@ -1,0 +1,43 @@
+# Python & Byte-code
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.venv/
+
+# Jupyter Notebook Checkpoints
+.ipynb_checkpoints
+*/.ipynb_checkpoints/*
+
+# Data & Output Artifacts
+outputs/models/*.pkl
+outputs/models/*.joblib
+outputs/predictions/*.csv
+.DS_Store
+Thumbs.db
+
+# IDE & Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Environment credentials
+.env
+.env.*
+ 
+# Local database
+*.db
+*.sqlite
+*.sqlite3
+
+# CatBoost generated training files
+catboost_info/
+**/catboost_info/
+
+# Evaluation model artifacts
+outputs/evaluation/models/

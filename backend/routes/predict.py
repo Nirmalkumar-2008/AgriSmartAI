@@ -117,6 +117,7 @@ def get_evaluation_summary():
             "weighted_f1_pct": "93.03%",
             "macro_f1": 0.9348,
             "macro_f1_pct": "93.48%",
+            "macro_f1_str": "0.9348",
             "f1_score": 0.9348,
             "f1_score_pct": "93.48%",
             "cv_accuracy": 0.9329,

@@ -1,3 +1,4 @@
+
 # Python & Byte-code
 __pycache__/
 *.py[cod]
@@ -10,7 +11,7 @@ ENV/
 .venv/
 
 # Jupyter Notebook Checkpoints
-.ipynb_checkpoints
+.ipynb_checkpoints/
 */.ipynb_checkpoints/*
 
 # Data & Output Artifacts
@@ -29,11 +30,17 @@ Thumbs.db
 # Environment credentials
 .env
 .env.*
- 
-# Local database
+
+# Local databases
 *.db
 *.sqlite
 *.sqlite3
+
+# Node.js dependencies
+node_modules/
+
+# Frontend build output
+frontend/dist/
 
 # CatBoost generated training files
 catboost_info/
@@ -41,3 +48,6 @@ catboost_info/
 
 # Evaluation model artifacts
 outputs/evaluation/models/
+
+# Local feedback database
+backend/feedback.db

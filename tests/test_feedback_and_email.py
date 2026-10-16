@@ -132,7 +132,7 @@ class TestFeedbackPrivacyAndPersistence:
 
     def test_feedback_saving_succeeds_even_when_email_fails(self, monkeypatch):
         """Feedback continues to be saved in database when email delivery fails."""
-        monkeypatch.setenv("SMTP_PASSWORD", "")  # unconfigured password
+        monkeypatch.delenv("RESEND_API_KEY", raising=False)
 
         payload = {
             "name": "Jane Doe",
@@ -156,113 +156,121 @@ class TestFeedbackPrivacyAndPersistence:
         conn.close()
 
 
-class TestEmailNotificationService:
-    """Tests for utils.email_service.send_feedback_email."""
 
-    def test_email_missing_or_placeholder_password_handled_gracefully(self, monkeypatch):
-        """Missing or placeholder SMTP_PASSWORD returns False gracefully without raising exceptions."""
-        for placeholder in ["", "YOUR_GMAIL_APP_PASSWORD", "your_gmail_app_password_here"]:
-            monkeypatch.setenv("SMTP_PASSWORD", placeholder)
+class TestEmailNotificationService:
+    """Tests for the Resend email notification service."""
+
+    def test_missing_resend_api_key_handled_gracefully(self, monkeypatch):
+        """Missing API key must not trigger an API request."""
+        monkeypatch.delenv("RESEND_API_KEY", raising=False)
+
+        with patch("utils.email_service.resend.Emails.send") as mock_send:
             success, msg = send_feedback_email(
                 name="Test",
                 email="test@example.com",
                 subject="Test",
                 category="General Feedback",
-                message="Test Message",
-                timestamp="2026-10-16 12:00:00"
+                message="Test message",
+                timestamp="2026-10-16 12:00:00",
             )
-            assert success is False
-            assert "SMTP_PASSWORD is not configured" in msg
 
-    def test_email_app_password_spaces_handled(self, monkeypatch):
-        """Gmail 16-character App Passwords with spaces (e.g. abcd efgh ijkl mnop) are sanitized."""
-        monkeypatch.setenv("SMTP_PASSWORD", "abcd efgh ijkl mnop")
-        monkeypatch.setenv("SMTP_USERNAME", "sender@gmail.com")
-        
-        with patch("smtplib.SMTP") as mock_smtp:
-            instance = MagicMock()
-            mock_smtp.return_value.__enter__.return_value = instance
+        assert success is False
+        assert mock_send.call_count == 0
 
+    def test_resend_email_success_without_real_api_call(self, monkeypatch):
+        """A mocked Resend response verifies success without sending an email."""
+        monkeypatch.setenv("RESEND_API_KEY", "test_key_not_real")
+        monkeypatch.setenv("RESEND_FROM_EMAIL", "onboarding@resend.dev")
+        monkeypatch.setenv("FEEDBACK_RECEIVER", "admin@example.com")
+
+        with patch(
+            "utils.email_service.resend.Emails.send",
+            return_value={"id": "test-email-id"},
+        ) as mock_send:
             success, msg = send_feedback_email(
-                name="Farmer",
-                email="farmer@example.com",
-                subject="Yield Question",
-                category="General Feedback",
-                message="Testing spaces",
-                timestamp="2026-10-16 12:00:00"
-            )
-
-            assert success is True
-            # Login must have received password without spaces
-            instance.login.assert_called_once_with("sender@gmail.com", "abcdefghijklmnop")
-
-    def test_email_env_variable_aliases(self, monkeypatch):
-        """Supports SMTP_EMAIL or SMTP_USER as sender username if SMTP_USERNAME is not set."""
-        monkeypatch.delenv("SMTP_USERNAME", raising=False)
-        monkeypatch.setenv("SMTP_EMAIL", "sender_alt@gmail.com")
-        monkeypatch.setenv("SMTP_PASSWORD", "testpassword1234")
-
-        with patch("smtplib.SMTP") as mock_smtp:
-            instance = MagicMock()
-            mock_smtp.return_value.__enter__.return_value = instance
-
-            success, _ = send_feedback_email(
-                name="Farmer",
+                name="Test Farmer",
                 email="farmer@example.com",
                 subject="Crop Question",
                 category="General Feedback",
-                message="Testing alias",
-                timestamp="2026-10-16 12:00:00"
+                message="Testing the email service",
+                timestamp="2026-10-16 12:00:00",
             )
 
-            assert success is True
-            instance.login.assert_called_once_with("sender_alt@gmail.com", "testpassword1234")
+        assert success is True
+        mock_send.assert_called_once()
 
-    def test_email_authentication_error_handled_cleanly(self, monkeypatch):
-        """SMTPAuthenticationError is caught, logged, and does not leak credentials."""
-        monkeypatch.setenv("SMTP_PASSWORD", "secret_pass")
-        monkeypatch.setenv("SMTP_USERNAME", "sender@gmail.com")
+        params = mock_send.call_args.args[0]
+        assert params["from"] == "AgriSmartAI Platform <onboarding@resend.dev>"
+        assert params["to"] == ["admin@example.com"]
+        assert params["reply_to"] == "farmer@example.com"
 
-        with patch("smtplib.SMTP") as mock_smtp:
-            instance = MagicMock()
-            import smtplib
-            instance.login.side_effect = smtplib.SMTPAuthenticationError(535, b"Authentication credentials invalid")
-            mock_smtp.return_value.__enter__.return_value = instance
+    def test_resend_failure_is_handled_without_leaking_secrets(
+        self, monkeypatch, caplog
+    ):
+        """API failures must not expose credentials or private message content."""
+        secret = "test_key_not_real_123"
+        private_message = "private-feedback-content-123"
 
+        monkeypatch.setenv("RESEND_API_KEY", secret)
+
+        with patch(
+            "utils.email_service.resend.Emails.send",
+            side_effect=RuntimeError("Simulated Resend failure"),
+        ):
             success, msg = send_feedback_email(
-                name="Test",
-                email="test@example.com",
-                subject="Subject",
-                category="UI / UX",
-                message="Message",
-                timestamp="2026-10-16 12:00:00"
+                name="Test Farmer",
+                email="farmer@example.com",
+                subject="Test",
+                category="General Feedback",
+                message=private_message,
+                timestamp="2026-10-16 12:00:00",
             )
 
-            assert success is False
-            assert "SMTP authentication failed" in msg
-            # Check secret is not in the error message
-            assert "secret_pass" not in msg
+        assert success is False
+        assert secret not in msg
+        assert secret not in caplog.text
+        assert private_message not in caplog.text
 
-    def test_email_connection_error_handled_cleanly(self, monkeypatch):
-        """Connection errors are caught and handled gracefully."""
-        monkeypatch.setenv("SMTP_PASSWORD", "secret_pass")
-        monkeypatch.setenv("SMTP_HOST", "invalid.smtp.host")
+    def test_feedback_is_saved_when_resend_fails(self, monkeypatch):
+        """Feedback must still be saved if Resend is unavailable."""
+        monkeypatch.setenv("RESEND_API_KEY", "test_key_not_real")
 
-        with patch("smtplib.SMTP") as mock_smtp:
-            import smtplib
-            mock_smtp.side_effect = smtplib.SMTPConnectError(421, b"Connection refused")
+        payload = {
+            "name": "Network Test Farmer",
+            "email": "farmer_net@example.com",
+            "subject": "Testing email failure",
+            "category": "Weather Integration",
+            "message": "Feedback should be saved even if email fails.",
+        }
 
-            success, msg = send_feedback_email(
-                name="Test",
-                email="test@example.com",
-                subject="Subject",
-                category="UI / UX",
-                message="Message",
-                timestamp="2026-10-16 12:00:00"
+        with patch(
+            "utils.email_service.resend.Emails.send",
+            side_effect=RuntimeError("Simulated Resend failure"),
+        ):
+            response = client.post("/feedback", json=payload)
+
+        assert response.status_code == 201
+        data = response.json()
+        assert data.get("success") is True
+        assert data.get("database_saved") is True
+        assert data.get("email_sent") is False
+
+        conn = sqlite3.connect(DB_PATH)
+        try:
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT name, email FROM feedback WHERE id = ?",
+                (data["feedback_id"],),
             )
+            row = cursor.fetchone()
+        finally:
+            conn.close()
 
-            assert success is False
-            assert "Could not connect to SMTP server" in msg
+        assert row is not None
+        assert row[0] == "Network Test Farmer"
+        assert row[1] == "farmer_net@example.com"
+
+
 
 
 class TestFrontendPrivacyGuarantees:

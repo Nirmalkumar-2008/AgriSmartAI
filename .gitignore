@@ -51,3 +51,6 @@ outputs/evaluation/models/
 
 # Local feedback database
 backend/feedback.db
+# Local backup and manual email test
+tests/test_feedback_and_email.py.backup
+resend_email_manual.py

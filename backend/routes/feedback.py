@@ -132,6 +132,7 @@ def submit_feedback(payload: FeedbackRequest):
     )
 
     if email_sent:
+        logger.info("Feedback (ID: %s) processed and notification email sent.", feedback_id)
         return {
             "success": True,
             "database_saved": True,
@@ -141,6 +142,7 @@ def submit_feedback(payload: FeedbackRequest):
             "timestamp": timestamp
         }
     else:
+        logger.warning("Feedback (ID: %s) saved to database, but notification email was not sent: %s", feedback_id, email_msg)
         return {
             "success": True,
             "database_saved": True,

@@ -1,8 +1,10 @@
 import os
 import sqlite3
 import logging
+import secrets
 from datetime import datetime
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, status, Header, Security, Depends
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel, Field
 from typing import Optional, List
 from utils.email_service import send_feedback_email
@@ -32,6 +34,50 @@ def init_db():
 
 init_db()
 
+# Administrative Access Security
+security_bearer = HTTPBearer(auto_error=False)
+
+def verify_admin_access(
+    x_admin_key: Optional[str] = Header(None, alias="X-Admin-Key"),
+    auth: Optional[HTTPAuthorizationCredentials] = Security(security_bearer)
+) -> bool:
+    """
+    Enforces server-side authentication for administrative access to feedback records.
+    Requires ADMIN_API_KEY or FEEDBACK_ADMIN_KEY in environment variables.
+    If no admin key is configured, access is rejected (403 Forbidden) so that
+    no unauthenticated, default, or accidental exposure can occur.
+    """
+    admin_secret = os.getenv("ADMIN_API_KEY") or os.getenv("FEEDBACK_ADMIN_KEY")
+    if not admin_secret or not admin_secret.strip():
+        logger.warning("Feedback access attempted, but no administrative key (ADMIN_API_KEY) is configured on this server.")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Administrative feedback access is not configured on this server."
+        )
+
+    provided_key = None
+    if x_admin_key and x_admin_key.strip():
+        provided_key = x_admin_key.strip()
+    elif auth and auth.credentials and auth.credentials.strip():
+        provided_key = auth.credentials.strip()
+
+    if not provided_key:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required. Please provide a valid administrative key via 'X-Admin-Key' header or 'Authorization: Bearer <key>'.",
+            headers={"WWW-Authenticate": "Bearer"}
+        )
+
+    if not secrets.compare_digest(provided_key, admin_secret.strip()):
+        logger.warning("Failed administrative feedback access attempt with invalid credentials.")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid administrative credentials.",
+            headers={"WWW-Authenticate": "Bearer"}
+        )
+
+    return True
+
 class FeedbackRequest(BaseModel):
     name: str = Field(..., max_length=100)
     email: str = Field(..., max_length=150)
@@ -52,14 +98,13 @@ class FeedbackResponse(BaseModel):
 def submit_feedback(payload: FeedbackRequest):
     if not payload.name.strip() or not payload.email.strip() or not payload.subject.strip() or not payload.message.strip():
         raise HTTPException(status_code=400, detail="Name, email, subject, and message are required.")
-    
+
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     category = payload.category.strip() if payload.category else "General Feedback"
 
-    print(f"Feedback received from user: {payload.name.strip()} ({payload.email.strip()})")
-    logger.info(f"Feedback received from user: {payload.name.strip()} ({payload.email.strip()})")
+    logger.info("Feedback submission received (category: %s)", category)
 
-    # Step 1: Save feedback to SQLite database
+    # Step 1: Save feedback to SQLite database safely
     try:
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
@@ -70,9 +115,8 @@ def submit_feedback(payload: FeedbackRequest):
         conn.commit()
         feedback_id = cursor.lastrowid
         conn.close()
-        
-        print("Feedback saved to database")
-        logger.info("Feedback saved to database")
+
+        logger.info("Feedback successfully saved to database (ID: %s)", feedback_id)
     except Exception as e:
         logger.error(f"Database error while saving feedback: {e}")
         raise HTTPException(status_code=500, detail="Database storage failed.")
@@ -107,13 +151,18 @@ def submit_feedback(payload: FeedbackRequest):
         }
 
 @router.get("/feedback", response_model=List[FeedbackResponse])
-def get_all_feedback():
+@router.get("/admin/feedback", response_model=List[FeedbackResponse], include_in_schema=False)
+def get_all_feedback(_: bool = Depends(verify_admin_access)):
+    """
+    Administrative endpoint to retrieve submitted feedback records.
+    Protected by server-side authentication (verify_admin_access).
+    """
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     cursor.execute("SELECT id, timestamp, name, email, subject, category, message FROM feedback ORDER BY id DESC")
     rows = cursor.fetchall()
     conn.close()
-    
+
     return [
         {
             "id": r[0],

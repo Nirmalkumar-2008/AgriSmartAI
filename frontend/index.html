@@ -3079,10 +3079,6 @@
                 <span>/predict</span>
               </div>
               <div className="p-3 bg-slate-50 dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center gap-2">
-                <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-bold rounded text-[10px]">GET</span>
-                <span>/feedback</span>
-              </div>
-              <div className="p-3 bg-slate-50 dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center gap-2">
                 <span className="px-2 py-0.5 bg-blue-500/20 text-blue-600 dark:text-blue-400 font-bold rounded text-[10px]">POST</span>
                 <span>/feedback</span>
               </div>
@@ -3261,20 +3257,6 @@
       const [isSending, setIsSending] = useState(false);
       const [errors, setErrors] = useState({});
       const [submitError, setSubmitError] = useState(null);
-      const [feedbackHistory, setFeedbackHistory] = useState([]);
-
-      const fetchHistory = () => {
-        fetch('/feedback')
-          .then(res => res.json())
-          .then(data => {
-            if (Array.isArray(data)) setFeedbackHistory(data);
-          })
-          .catch(() => {});
-      };
-
-      useEffect(() => {
-        fetchHistory();
-      }, [submitted]);
 
       const handleSubmit = (e) => {
         e.preventDefault();
@@ -3303,7 +3285,6 @@
               setSubmitted(true);
               setEmailSent(Boolean(data.email_sent));
               setFormData({ name: '', email: '', subject: '', category: 'General Feedback', message: '' });
-              fetchHistory();
             })
             .catch(err => {
               setIsSending(false);
@@ -3350,7 +3331,7 @@
                   <>
                     <h3 className="text-lg font-bold text-slate-900 dark:text-white">✓ Feedback saved successfully.</h3>
                     <p className="text-xs text-amber-600 dark:text-amber-400 font-semibold">
-                      ⚠️ Email notification could not be sent. (Configure <code>SMTP_PASSWORD</code> in <code>.env</code> with a valid Gmail App Password).
+                      ℹ️ Your feedback has been safely recorded in the database. (Email notification service is temporarily unavailable).
                     </p>
                   </>
                 )}
@@ -3448,31 +3429,9 @@
             )}
           </div>
 
-          {/* SUBMITTED MESSAGES AUDIT SECTION */}
-          {feedbackHistory.length > 0 && (
-            <div className="glass-card bg-white/95 dark:bg-[#0b1d33]/90 p-8 rounded-3xl border border-slate-200 dark:border-slate-800 space-y-4 shadow-sm">
-              <h3 className="text-lg font-bold font-display text-slate-900 dark:text-white flex items-center gap-2">
-                <span>📁</span>
-                <span>Submitted Platform Feedback Log ({feedbackHistory.length})</span>
-              </h3>
-
-              <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
-                {feedbackHistory.map((item) => (
-                  <div key={item.id} className="p-4 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-1 text-xs">
-                    <div className="flex justify-between items-center text-slate-500 dark:text-slate-400 text-[11px]">
-                      <span><strong className="text-slate-900 dark:text-white">{item.name}</strong> ({item.email})</span>
-                      <span className="font-mono">{item.timestamp}</span>
-                    </div>
-                    <div className="flex items-center gap-2 font-bold text-emerald-600 dark:text-emerald-400">
-                      <span className="px-2 py-0.5 bg-emerald-500/10 rounded border border-emerald-500/20 text-[10px]">{item.category}</span>
-                      <span>{item.subject}</span>
-                    </div>
-                    <p className="text-slate-600 dark:text-slate-300 text-[11px] pt-1">{item.message}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+        </div>
+      );
+    };
 
         </div>
       );

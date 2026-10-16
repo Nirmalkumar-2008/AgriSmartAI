@@ -280,6 +280,50 @@ class TestFrontendPrivacyGuarantees:
         assert "fetch('/feedback')" not in content
         assert 'fetch("/feedback")' not in content
 
+    def test_index_html_jsx_syntax_validity(self):
+        """Verifies that the inline Babel JSX script in index.html parses with zero syntax errors."""
+        index_path = os.path.join(PROJECT_ROOT, "frontend", "index.html")
+        with open(index_path, "r", encoding="utf-8") as f:
+            content = f.read()
+
+        start_tag = '<script type="text/babel">'
+        end_tag = '</script>'
+        start_idx = content.find(start_tag)
+        assert start_idx != -1, "Inline Babel script start tag not found"
+        start_idx += len(start_tag)
+        end_idx = content.find(end_tag, start_idx)
+        assert end_idx != -1, "Inline Babel script end tag not found"
+        script_code = content[start_idx:end_idx]
+
+        import subprocess
+        node_script = (
+            "const parser = require('./frontend/node_modules/@babel/parser');\n"
+            "let code = '';\n"
+            "process.stdin.setEncoding('utf8');\n"
+            "process.stdin.on('data', chunk => { code += chunk; });\n"
+            "process.stdin.on('end', () => {\n"
+            "  try {\n"
+            "    parser.parse(code, { sourceType: 'module', plugins: ['jsx'] });\n"
+            "    console.log('PARSED_OK');\n"
+            "  } catch (err) {\n"
+            "    console.error('JSX_SYNTAX_ERROR: ' + err.message + ' at line ' + err.loc.line + ', col ' + err.loc.column);\n"
+            "    process.exit(1);\n"
+            "  }\n"
+            "});\n"
+        )
+        result = subprocess.run(
+            ["node", "-e", node_script],
+            input=script_code,
+            cwd=PROJECT_ROOT,
+            capture_output=True,
+            text=True,
+            encoding="utf-8"
+        )
+        assert result.returncode == 0, f"JSX Syntax Error in frontend/index.html:\n{result.stderr}\n{result.stdout}"
+        assert "PARSED_OK" in result.stdout
+
+
+
 
 class TestApplicationHealthAndRegressions:
     """Verifies existing API endpoints, health check, and prediction service."""
